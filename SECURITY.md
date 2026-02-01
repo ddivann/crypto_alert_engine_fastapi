@@ -2,13 +2,21 @@
 
 ## Security Analysis Completed
 
-Date: 2026-02-01
+Date: 2026-02-01 (Updated)
 
 ### CodeQL Security Scan Results
 
 ✅ **No security vulnerabilities detected**
 
 The codebase has been scanned using CodeQL security analysis and no alerts were found.
+
+### Dependency Security Scan Results
+
+✅ **All dependencies are secure**
+
+All dependencies have been checked against the GitHub Advisory Database:
+- FastAPI updated to 0.109.1 (patched ReDoS vulnerability in Content-Type header)
+- All other dependencies verified secure
 
 ### Security Features Implemented
 
