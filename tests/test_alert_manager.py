@@ -2,7 +2,7 @@
 Integration tests for the Alert Manager service.
 """
 import pytest
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 from shared.schemas import PriceTickMessage, AlertCondition
@@ -102,7 +102,7 @@ async def test_alert_throttling():
         condition=AlertConditionEnum.ABOVE,
         threshold=44000.0,
         is_active=True,
-        last_triggered_at=datetime.utcnow() - timedelta(minutes=30)  # 30 min ago
+        last_triggered_at=datetime.now(timezone.utc) - timedelta(minutes=30)  # 30 min ago
     )
     
     mock_session = AsyncMock()

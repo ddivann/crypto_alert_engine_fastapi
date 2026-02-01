@@ -3,14 +3,14 @@ Alert checker - Business logic for evaluating alert conditions.
 Implements deduplication and throttling.
 """
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from redis import asyncio as aioredis
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from sqlalchemy import select
 
 from shared.schemas import PriceTickMessage, AlertTriggeredMessage, AlertCondition
-from shared.utils import setup_logging
+from shared.utils import setup_logging, now_utc
 from .models import AlertRule, AlertHistory, AlertConditionEnum
 
 
@@ -77,7 +77,7 @@ class AlertChecker:
         
         # Check throttling - don't trigger if recently triggered
         if alert.last_triggered_at:
-            time_since_last = datetime.utcnow() - alert.last_triggered_at
+            time_since_last = now_utc() - alert.last_triggered_at
             if time_since_last < timedelta(minutes=self.THROTTLE_MINUTES):
                 return False
         
@@ -126,7 +126,7 @@ class AlertChecker:
             )
             
             # Update alert last triggered time
-            alert.last_triggered_at = datetime.utcnow()
+            alert.last_triggered_at = now_utc()
             
             # Save to history
             history = AlertHistory(

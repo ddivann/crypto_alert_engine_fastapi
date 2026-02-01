@@ -7,6 +7,8 @@ from enum import Enum
 from typing import Optional
 from pydantic import BaseModel, Field
 
+from shared.utils import now_utc
+
 
 class MessageType(str, Enum):
     """Types of messages in the system."""
@@ -18,7 +20,7 @@ class PriceTickMessage(BaseModel):
     """Message published by Price Fetcher service."""
     version: str = Field(default="1.0", description="Schema version")
     message_type: MessageType = Field(default=MessageType.PRICE_TICK)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=now_utc)
     symbol: str = Field(..., description="Trading pair symbol (e.g., BTCUSDT)")
     exchange: str = Field(..., description="Exchange name (e.g., binance, bybit)")
     price: float = Field(..., gt=0, description="Current price")
@@ -49,7 +51,7 @@ class AlertTriggeredMessage(BaseModel):
     """Message published by Alert Manager service."""
     version: str = Field(default="1.0", description="Schema version")
     message_type: MessageType = Field(default=MessageType.ALERT_TRIGGERED)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=now_utc)
     alert_id: int = Field(..., description="Alert rule ID")
     user_id: int = Field(..., description="User ID")
     symbol: str = Field(..., description="Trading pair symbol")

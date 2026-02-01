@@ -4,10 +4,13 @@ Shared utility functions and classes.
 import json
 import logging
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict
 
-from shared.config import get_settings
+
+def now_utc() -> datetime:
+    """Get current UTC datetime (timezone-aware)."""
+    return datetime.now(timezone.utc)
 
 
 def setup_logging() -> logging.Logger:
@@ -15,6 +18,7 @@ def setup_logging() -> logging.Logger:
     Set up structured logging for the application.
     Returns a configured logger instance.
     """
+    from shared.config import get_settings
     settings = get_settings()
     
     logger = logging.getLogger(settings.service_name)
@@ -44,7 +48,7 @@ class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         """Format log record as JSON."""
         log_data: Dict[str, Any] = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": now_utc().isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -83,3 +87,18 @@ class RetryConfig:
         """Calculate delay for given attempt number."""
         delay = self.initial_delay * (self.exponential_base ** attempt)
         return min(delay, self.max_delay)
+
+
+def parse_message_data(message_data: dict, key: str = "data") -> str:
+    """
+    Parse message data from Redis, handling both bytes and string formats.
+    
+    Args:
+        message_data: Message data dict from Redis
+        key: Key to extract from message_data
+        
+    Returns:
+        Parsed data as string
+    """
+    data = message_data.get(key.encode() if isinstance(list(message_data.keys())[0], bytes) else key)
+    return data.decode() if isinstance(data, bytes) else data

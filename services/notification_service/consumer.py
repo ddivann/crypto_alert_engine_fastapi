@@ -9,7 +9,7 @@ from typing import Optional
 from redis import asyncio as aioredis
 
 from shared.schemas import AlertTriggeredMessage
-from shared.utils import setup_logging
+from shared.utils import setup_logging, parse_message_data, now_utc
 
 
 logger = setup_logging()
@@ -74,11 +74,8 @@ class NotificationConsumer:
         for stream_name, message_list in messages:
             for message_id, message_data in message_list:
                 try:
-                    # Parse message
-                    data = json.loads(
-                        message_data[b"data"] if isinstance(message_data[b"data"], bytes) 
-                        else message_data["data"]
-                    )
+                    # Parse message using shared utility
+                    data = json.loads(parse_message_data(message_data))
                     
                     # Convert to AlertTriggeredMessage
                     data["timestamp"] = datetime.fromisoformat(data["timestamp"])
@@ -144,7 +141,7 @@ class NotificationConsumer:
                 {
                     "original_id": message_id,
                     "data": message_data.get("data", ""),
-                    "failed_at": datetime.utcnow().isoformat()
+                    "failed_at": now_utc().isoformat()
                 },
                 maxlen=1000
             )

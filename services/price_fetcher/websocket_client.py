@@ -4,7 +4,7 @@ Handles connection management, reconnection, and rate limiting.
 """
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Set, Optional
 import websockets
 from websockets.exceptions import WebSocketException
@@ -101,7 +101,7 @@ class BinanceWebSocketClient:
                 exchange="binance",
                 price=float(trade_data["p"]),  # Price
                 volume=float(trade_data["q"]),  # Quantity
-                timestamp=datetime.utcfromtimestamp(trade_data["T"] / 1000)  # Trade time
+                timestamp=datetime.fromtimestamp(trade_data["T"] / 1000, tz=timezone.utc)  # Trade time
             )
             
             # Publish to Redis
