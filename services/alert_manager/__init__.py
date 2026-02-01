@@ -1,0 +1,1 @@
+"""Alert Manager Service Package."""

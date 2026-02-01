@@ -1,0 +1,110 @@
+version: '3.8'
+
+services:
+  # Redis - Message Broker
+  redis:
+    image: redis:7-alpine
+    container_name: crypto-alert-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - crypto-alert-network
+
+  # PostgreSQL - Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: crypto-alert-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: crypto_alerts
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - crypto-alert-network
+
+  # Service A: Price Fetcher
+  price-fetcher:
+    build:
+      context: .
+      dockerfile: services/price_fetcher/Dockerfile
+    container_name: crypto-alert-price-fetcher
+    env_file:
+      - .env
+    environment:
+      - REDIS_HOST=redis
+      - SERVICE_NAME=price-fetcher
+    ports:
+      - "8001:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - crypto-alert-network
+
+  # Service B: Alert Manager
+  alert-manager:
+    build:
+      context: .
+      dockerfile: services/alert_manager/Dockerfile
+    container_name: crypto-alert-manager
+    env_file:
+      - .env
+    environment:
+      - REDIS_HOST=redis
+      - POSTGRES_HOST=postgres
+      - SERVICE_NAME=alert-manager
+    ports:
+      - "8002:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - crypto-alert-network
+
+  # Service C: Notification Service
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification_service/Dockerfile
+    container_name: crypto-alert-notification
+    env_file:
+      - .env
+    environment:
+      - REDIS_HOST=redis
+      - SERVICE_NAME=notification-service
+    ports:
+      - "8003:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - crypto-alert-network
+
+volumes:
+  redis_data:
+  postgres_data:
+
+networks:
+  crypto-alert-network:
+    driver: bridge
