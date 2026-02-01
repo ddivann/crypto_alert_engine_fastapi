@@ -1,0 +1,39 @@
+Система мониторинга и уведомлений о крипто-активах (Crypto Alert Engine).
+Архитектура проекта (микросервисы, событийная модель)
+
+    Service A: Price Fetcher (Асинхронный сборщик)
+        Стек: FastAPI + httpx + websockets (приоритет на WebSocket для stream-цен).
+        Суть: Поддерживает подписки на пары у бирж (Binance/Bybit), агрегирует тики.
+        Фишка: Асинхронные циклы, backpressure, контроль rate-limit и ретраи.
+        Выход: Публикует события price.tick в брокер.
+
+    Message Broker: Redis Streams / RabbitMQ / Kafka (выбор зависит от нагрузки)
+        Суть: Развязка сервисов, ретраи, балансировка потребителей.
+        Рекомендация MVP: Redis Streams; рост — Kafka.
+
+    Service B: Alert Manager (Бизнес-логика)
+        Стек: FastAPI + PostgreSQL (SQLAlchemy 2.0 / asyncpg).
+        Суть: Хранит правила/пороги пользователей ("если BTC > 100k").
+        Логика: Дедупликация, троттлинг, «одно уведомление на условие».
+        Выход: Публикует события alert.triggered.
+
+    Service C: Notification Service (Рассыльщик)
+        Стек: FastAPI + aiogram (Telegram) и/или SendGrid (Email).
+        Суть: Принимает alert.triggered и отправляет уведомления.
+        Фишка: Ретраи с backoff, мёртвая очередь (DLQ), шаблоны сообщений.
+
+    Shared Components
+        Схема сообщений: единый формат (JSON + версионирование).
+        Конфигурация: env + pydantic settings.
+        Observability: логирование (структурированное), метрики (Prometheus), трейсинг.
+
+    Поток данных
+        Биржи -> Price Fetcher -> Broker (price.tick)
+        Broker -> Alert Manager -> Broker (alert.triggered)
+        Broker -> Notification Service -> Каналы доставки
+
+    Нефункциональные требования (минимум для MVP)
+        • Rate-limit и авто-реконнект у бирж
+        • Idempotency и дедупликация событий
+        • Хранение истории цен (опционально) в TimescaleDB
+        • Контуры безопасности: секреты, валидация входных payload
